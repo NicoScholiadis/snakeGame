@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  	<title>Snake Game</title>
+    <link href="https://fonts.googleapis.com/css?family=Antic+Slab" rel="stylesheet">
+    <link rel="shortcut icon" href="img/anaconda-40488-svgrepo-com.svg">
+  </head>
+
+  <body>
+
+    <div id="score">Comenzamos: 0</div>
+    <canvas id="gameCanvas" width="300" height="300"></canvas>
+
+    <style>
+      #gameCanvas {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      #score {
+        text-align: center;
+        font-size: 100px;
+        font-family: 'Inter', sans-serif;
+font-family: 'Nerko One', cursive;
+      }
+    </style>
+  </body>
+
+  <script>
+    const GAME_SPEED = 130;
+    const CANVAS_BORDER_COLOUR = 'black';
+    const CANVAS_BACKGROUND_COLOUR = "lightgreen";
+    const SNAKE_COLOUR = 'green';
+    const SNAKE_BORDER_COLOUR = 'darkgreen';
+    const FOOD_COLOUR = 'red';
+    const FOOD_BORDER_COLOUR = 'darkred';
+
+    let snake = [
+      {x: 150, y: 150},
+      {x: 140, y: 150},
+      {x: 130, y: 150},
+      {x: 120, y: 150},
+      {x: 110, y: 150}
+    ]
+
+   
+    let score = 0;
+    
+    let changingDirection = false;
+    
+    let foodX;
+    
+    let foodY;
+    
+    let dx = 10;
+    
+    let dy = 0;
+
+    
+    const gameCanvas = document.getElementById("gameCanvas");
+    
+    const ctx = gameCanvas.getContext("2d");
+
+    // Start game
+    main();
+    
+    createFood();
+    
+    document.addEventListener("keydown", changeDirection);
+
+
+    
+    function main() {
+      // Si el juego termino regresa temprano para detener el juego
+      if (didGameEnd()) return;
+
+      setTimeout(function onTick() {
+        changingDirection = false;
+        clearCanvas();
+        drawFood();
+        advanceSnake();
+        drawSnake();
+
+        // jugar de nuevo
+        main();
+      }, GAME_SPEED)
+    }
+
+    /**
+     * cambiar background colour CANVAS_BACKGROUND_COLOUR y
+     * borde al rededor
+     */
+    function clearCanvas() {
+    
+      ctx.fillStyle = CANVAS_BACKGROUND_COLOUR;
+      //  color de bordes
+      ctx.strokestyle = CANVAS_BORDER_COLOUR;
+
+      //Dibuja un rectángulo "relleno" para cubrir todo el lienzo.
+      ctx.fillRect(0, 0, gameCanvas.width, gameCanvas.height);
+      // Dibuja borde alrededor
+      ctx.strokeRect(0, 0, gameCanvas.width, gameCanvas.height);
+    }
+
+    /**
+     * dibuja la comida
+     */
+    function drawFood() {
+      ctx.fillStyle = FOOD_COLOUR;
+      ctx.strokestyle = FOOD_BORDER_COLOUR;
+      ctx.fillRect(foodX, foodY, 10, 10);
+      ctx.strokeRect(foodX, foodY, 10, 10);
+    }
+
+    /**
+   * Avanza la serpiente cambiando las coordenadas x de sus partes
+     * según la velocidad horizontal y las coordenadas y de sus partes
+     * según la velocidad vertical
+     */
+    function advanceSnake() {
+      // crea la nueva cabeza de la serpienye
+      const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+      // agrega nueva cabeza al comienzo del juego
+      snake.unshift(head);
+
+      const didEatFood = snake[0].x === foodX && snake[0].y === foodY;
+      if (didEatFood) {
+        // aumentar score
+        score += 1;
+        // Mostrar score en pantalla
+        document.getElementById('score').innerHTML = score;
+
+        // generar nueva locacion de comida
+        createFood();
+      } else {
+        // remover la ultima parte dle cuerpo de la serpiente
+        snake.pop();
+      }
+    }
+
+    /**
+     *Devuelve verdadero si la cabeza de la serpiente tocó otra parte del juego.
+     * o cualquiera de las paredes
+     */
+    function didGameEnd() {
+      for (let i = 4; i < snake.length; i++) {
+        if (snake[i].x === snake[0].x && snake[i].y === snake[0].y) return true
+      }
+
+      const hitLeftWall = snake[0].x < 0;
+      const hitRightWall = snake[0].x > gameCanvas.width - 10;
+      const hitToptWall = snake[0].y < 0;
+      const hitBottomWall = snake[0].y > gameCanvas.height - 10;
+
+      return hitLeftWall || hitRightWall || hitToptWall || hitBottomWall
+    }
+
+    /**
+     *Genera un número aleatorio que es un múltiplo de 10 dado un mínimo
+     * y un número máximo
+     * @param { número } min - El número mínimo que puede ser el número aleatorio
+     * @param { number } max - El número máximo que puede ser el número aleatorio
+     */
+    function randomTen(min, max) {
+      return Math.round((Math.random() * (max-min) + min) / 10) * 10;
+    }
+
+    /**
+     *Crea un conjunto aleatorio de coordenadas para la comida de serpiente.
+     */
+    function createFood() {
+      // Genere un número aleatorio para la coordenada x de los alimentos
+      foodX = randomTen(0, gameCanvas.width - 10);
+      // Genere un número aleatorio para la coordenada y de los alimentos
+      foodY = randomTen(0, gameCanvas.height - 10);
+
+      //si la nueva ubicación de comida es donde está actualmente la serpiente, genere una nueva ubicación de comida
+      snake.forEach(function isFoodOnSnake(part) {
+        const foodIsoNsnake = part.x == foodX && part.y == foodY;
+        if (foodIsoNsnake) createFood();
+      });
+    }
+
+    /**
+     * dibujo snake
+     */
+    function drawSnake() {
+      // recorrer las partes de la serpiente dibujando cada parte en el lienzo
+      snake.forEach(drawSnakePart)
+    }
+
+    /**
+     * Dibuja una parte de la serpiente en el lienzo.
+     * @param { object } snakePart - Las coordenadas donde se debe dibujar la parte
+     */
+    function drawSnakePart(snakePart) {
+      // Set the colour of the snake part
+      ctx.fillStyle = SNAKE_COLOUR;
+
+     
+      ctx.strokestyle = SNAKE_BORDER_COLOUR;
+
+  
+      ctx.fillRect(snakePart.x, snakePart.y, 10, 10);
+
+      // Dibuja un borde alrededor de la parte de la serpiente.
+      ctx.strokeRect(snakePart.x, snakePart.y, 10, 10);
+    }
+
+    /**
+     * Cambia la velocidad vertical y horizontal de la serpiente según el
+     * tecla que fue presionada.
+     * La dirección no se puede cambiar a la dirección opuesta, para evitar que la serpiente
+     * de marcha atrás
+     * Por ejemplo, si la dirección es 'derecha', no puede convertirse en 'izquierda'
+     * @param {objet} evento - El evento keydown
+     */
+    function changeDirection(event) {
+      const LEFT_KEY = 37;
+      const RIGHT_KEY = 39;
+      const UP_KEY = 38;
+      const DOWN_KEY = 40;
+      /**
+       * Evita que la serpiente retroceda.
+       * Escenario de ejemplo:
+       * Snake se mueve hacia la derecha. El usuario presiona hacia abajo e inmediatamente se fue
+       * y la serpiente cambia inmediatamente de dirección sin dar un paso hacia abajo primero
+       */
+      if (changingDirection) return;
+      changingDirection = true;
+
+      const keyPressed = event.keyCode;
+
+      const goingUp = dy === -10;
+      const goingDown = dy === 10;
+      const goingRight = dx === 10;
+      const goingLeft = dx === -10;
+
+      if (keyPressed === LEFT_KEY && !goingRight) {
+        dx = -10;
+        dy = 0;
+      }
+      if (keyPressed === UP_KEY && !goingDown) {
+        dx = 0;
+        dy = -10;
+      }
+      if (keyPressed === RIGHT_KEY && !goingLeft) {
+        dx = 10;
+        dy = 0;
+      }
+      if (keyPressed === DOWN_KEY && !goingUp) {
+        dx = 0;
+        dy = 10;
+      }
+    }
+   
+
+  </script>
+</html>
